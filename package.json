@@ -4,7 +4,8 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
   },
   "author": "",
   "license": "ISC",
@@ -12,5 +13,8 @@
     "express": "^4.14.0",
     "express-favicon-short-circuit": "^1.1.0",
     "mongoose": "^4.7.8"
+  },
+  "engines": {
+    "node": "7.4.0"
   }
 }

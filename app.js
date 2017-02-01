@@ -4,7 +4,7 @@ var mongoose = require('mongoose');
 var path = require('path');
 
 app.use(require('express-favicon-short-circuit'));
-var regexUrl = new RegExp('@^(https?|ftp)://[^\\s/$.?#].[^\\s]*$@iS');
+var regexUrl = new RegExp('^(https?|ftp):\/\/[^\\s\/$.?#].[^\\s]*$');
 var port = process.env.PORT || 3000;
 
 mongoose.connect('mongodb://dbuser:userpwd@ds129179.mlab.com:29179/ekaraca-urlshortener');
@@ -18,32 +18,21 @@ var urlSchema = new Schema ({
 
 var Url = mongoose.model('Url', urlSchema);
 
-// DONT KNOW HOW TO RETURN COUNT-VALUE
-/*Url.count({}, function(err, c) {
-    count = c;
-    console.log(count);
-});
-
-var count = Url.count({}, function(err, c) {
-  return JSON.parse(c);
-});
-var count2 = count;
-*/
-
-//dbCount(postCount);
-
-app.get('/new/:newUrl', function(req, res) {
-  var newUrl = req.params.newUrl;
-  if (port) {
-//if (regexUrl.test(newUrl)) {
+app.get('/new/*', function(req, res) {
+  var newUrl = req.originalUrl.slice(5);
+  var coreUrl = req.protocol + '://' + req.get('host');
+  console.log(newUrl);
+  if (regexUrl.test(newUrl)) {
     console.log('URL OK!');
     Url.count({}, function(err, c) {
         console.log('count is: ' + c);
-
-        Url.find({original_url: newUrl}, function(err, url) {
+        //Check if url already exists in DB
+        Url.find({original_url: newUrl}, function(err, data) {
           if (err) throw err;
           console.log('count is still: ' + c);
-          if (url.length < 1) {
+
+          // Create new entry if it is new
+          if (data.length < 1) {
             if (c==0) {
               var code = 1
             }
@@ -58,45 +47,60 @@ app.get('/new/:newUrl', function(req, res) {
 
             addUrl.save(function(err) {
               if (err) throw err;
-              res.end(newUrl + ' was saved \nThe short_url-code is: ' + code)
+              Url.find({short_url: code}, function(err, data) {
+                var result = [{}];
+                result[0].original_url = data[0].original_url;
+                result[0].short_url = coreUrl + '/' + data[0].short_url
+                res.json(result);
+              })
             })
             }
+
+          // Return already existing short url from DB
           else {
-            res.end(url[0].original_url + ' is already saved! \nIts short_url-code is: ' + url[0].short_url);
+            var result = [{}];
+            result[0].original_url = data[0].original_url;
+            result[0].short_url = coreUrl + '/' + data[0].short_url
+            res.json(result);
           }
         })
-
-
-
-
     });
-
-
   }
   else {
-    res.send('URL IS NOT OK!')
+    res.end('URL IS NOT OK!');
   }
 })
 
 app.get('/:shortURL', function(req, res) {
+  var coreUrl = req.protocol + '://' + req.get('host');
   var enteredCode = req.params.shortURL;
   Url.find({short_url: enteredCode}, function(err, url) {
     if (err) throw err;
     if (url.length < 1) {
-      res.end("This Short-URL is not in the database!")
+      var result = {"error": "This Short-URL is not in the database!"}
+      res.json(result)
     }
     else {
-      res.end('Your requested URL is: ' + url[0].original_url);
+      res.redirect(url[0].original_url);
     }
   })
 });
 
 app.get('/', function(req, res) {
-  //res.sendFile(path.join(__dirname + '/index.html'));
-  var count = (Url.count({}, function(err, c) {
-    return c
-  }));
-  console.log(count);
+  res.sendFile(path.join(__dirname + '/index.html'));
 })
 
 app.listen(port);
+
+/*
+CASES:
+- O-URLS
+-- New O-URL: X
+-- Old O-URL: X
+- S-URLS
+-- Existing S-URLS: X
+-- Wrong S-URLS: X
+
+=> Figure out MongoDB Disconnect
+=> Implement RegExp Url Filtering X
+*/
