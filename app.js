@@ -18,47 +18,60 @@ var urlSchema = new Schema ({
 
 var Url = mongoose.model('Url', urlSchema);
 
-/*
 // DONT KNOW HOW TO RETURN COUNT-VALUE
+/*Url.count({}, function(err, c) {
+    count = c;
+    console.log(count);
+});
 
-var dbCount = function () {
-  Url.count({}, function(err, c) {
-    var counter = 0;
-    for (var i=0; i<c; i++) {
-      counter++
-    }
-    console.log(counter);
-    return counter;
-  })
-}
+var count = Url.count({}, function(err, c) {
+  return JSON.parse(c);
+});
+var count2 = count;
 */
+
+//dbCount(postCount);
 
 app.get('/new/:newUrl', function(req, res) {
   var newUrl = req.params.newUrl;
-
   if (port) {
 //if (regexUrl.test(newUrl)) {
-
     console.log('URL OK!');
-    Url.find({original_url: newUrl}, function(err, url) {
-      if (err) throw err;
-      var code = Math.round(Math.random()*10000000);
-      console.log('code is: ' + code);
-      if (url.length < 1) {
-        var addUrl = Url({
-          original_url: newUrl,
-          short_url: code
-        });
+    Url.count({}, function(err, c) {
+        console.log('count is: ' + c);
 
-        addUrl.save(function(err) {
+        Url.find({original_url: newUrl}, function(err, url) {
           if (err) throw err;
-          res.end(newUrl + ' was saved \nThe short_url-code is: ' + code)
+          console.log('count is still: ' + c);
+          if (url.length < 1) {
+            if (c==0) {
+              var code = 1
+            }
+            else {
+              var code = c+1
+            }
+            console.log('code is: ' + code);
+            var addUrl = Url({
+              original_url: newUrl,
+              short_url: code
+            });
+
+            addUrl.save(function(err) {
+              if (err) throw err;
+              res.end(newUrl + ' was saved \nThe short_url-code is: ' + code)
+            })
+            }
+          else {
+            res.end(url[0].original_url + ' is already saved! \nIts short_url-code is: ' + url[0].short_url);
+          }
         })
-        }
-      else {
-        res.end(url[0].original_url + ' is already saved! \nIts short_url-code is: ' + url[0].short_url);
-      }
-    })
+
+
+
+
+    });
+
+
   }
   else {
     res.send('URL IS NOT OK!')
@@ -79,7 +92,11 @@ app.get('/:shortURL', function(req, res) {
 });
 
 app.get('/', function(req, res) {
-  res.sendFile(path.join(__dirname + '/index.html'));
+  //res.sendFile(path.join(__dirname + '/index.html'));
+  var count = (Url.count({}, function(err, c) {
+    return c
+  }));
+  console.log(count);
 })
 
 app.listen(port);
